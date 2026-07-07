@@ -1,0 +1,2045 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ポケット将棋 — 自由編成・ドット駒スキン</title>
+<style>
+:root{
+  --bg:#1d1a16;
+  --board:#d9a85c;
+  --board-line:#7a5522;
+  --cell-hl:rgba(220,60,40,.32);
+  --cell-place:rgba(40,160,80,.30);
+  --cell-last:rgba(60,120,220,.28);
+  --piece-face:#f5e3bc;
+  --piece-edge:#8a6430;
+  --ink:#2a1c08;
+  --ink-red:#b8321e;
+  --paper:#efe6d2;
+  --accent:#b8321e;
+  --hand-bg:#2b261f;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--paper);
+  font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100%;overflow-x:hidden;
+  touch-action:manipulation;
+  user-select:none;-webkit-user-select:none;
+}
+header{
+  width:100%;max-width:520px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px 4px;
+}
+h1{font-size:20px;font-weight:700;letter-spacing:.3em;color:var(--paper)}
+h1 .sub{font-size:10px;letter-spacing:.15em;display:block;color:#9a8f7c;font-weight:400}
+.hbtns{display:flex;gap:6px}
+button{
+  font-family:inherit;
+  background:#3a332a;color:var(--paper);
+  border:1px solid #5a4f3f;border-radius:6px;
+  padding:6px 10px;font-size:12px;cursor:pointer;
+}
+button:active{background:#524736}
+button:disabled{opacity:.4}
+#status{
+  width:100%;max-width:520px;
+  text-align:center;font-size:14px;letter-spacing:.1em;
+  padding:4px 0;min-height:24px;
+}
+#status .check{color:#ff6a50;font-weight:700}
+#status .cost{color:#7fd98a;font-weight:700}
+.handrow{
+  width:min(96vw,520px);
+  min-height:44px;
+  background:var(--hand-bg);
+  border:1px solid #443c30;border-radius:8px;
+  display:flex;align-items:center;gap:6px;
+  padding:4px 8px;margin:3px 0;
+  overflow-x:auto;
+}
+.handrow .label{font-size:11px;color:#9a8f7c;letter-spacing:.1em;white-space:nowrap}
+.handrow.active{border-color:#8a6a3a}
+.handpiece{
+  position:relative;
+  width:34px;height:38px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.handpiece.sel .koma,
+.handpiece.sel .dotpiece{outline:3px solid var(--accent);outline-offset:-1px}
+.handpiece .cnt{
+  position:absolute;right:-2px;bottom:-2px;
+  background:var(--accent);color:#fff;
+  font-size:10px;line-height:1;
+  border-radius:8px;padding:2px 4px;
+  font-family:sans-serif;
+  z-index:2;
+}
+#boardwrap{
+  width:min(96vw,56vh,520px);
+  aspect-ratio:1/1;
+  background:var(--board);
+  border:3px solid var(--board-line);
+  border-radius:4px;
+  box-shadow:0 4px 18px rgba(0,0,0,.5), inset 0 0 40px rgba(122,85,34,.25);
+  display:grid;
+  grid-template-columns:repeat(9,1fr);
+  grid-template-rows:repeat(9,1fr);
+  position:relative;
+}
+.cell{
+  border:1px solid var(--board-line);
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.cell.hl::after{content:"";position:absolute;inset:0;background:var(--cell-hl);pointer-events:none}
+.cell.hl.empty::after{inset:32%;border-radius:50%}
+.cell.place::after{content:"";position:absolute;inset:0;background:var(--cell-place);pointer-events:none}
+.cell.last{background:var(--cell-last)}
+.cell.sel{outline:3px solid var(--accent);outline-offset:-2px;z-index:2}
+.koma{
+  position:relative;
+  width:86%;height:92%;
+  clip-path:polygon(50% 3%, 89% 24%, 82% 97%, 18% 97%, 11% 24%);
+  background:linear-gradient(160deg,#fbeecb 0%,var(--piece-face) 55%,#e0c890 100%);
+  border-bottom:2px solid var(--piece-edge);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;
+  color:var(--ink);
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+  font-size:min(4.6vw,3vh,25px);
+  line-height:1;
+  padding-top:12%;
+}
+.handpiece .koma{width:30px;height:34px;font-size:17px}
+.koma.gote{transform:rotate(180deg)}
+.koma.promoted{color:var(--ink-red)}
+.dotpiece{
+  width:94%;height:94%;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  pointer-events:none;
+}
+.handpiece .dotpiece{width:32px;height:32px;pointer-events:auto}
+/* ===== 編成トレイ ===== */
+#setupTray{
+  width:min(96vw,520px);
+  background:var(--hand-bg);
+  border:1px solid #443c30;border-radius:8px;
+  padding:6px 8px;margin:3px 0;
+  display:none;
+}
+#setupTray.show{display:block}
+.trayPieces{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px}
+.traybtn{
+  position:relative;flex:0 0 auto;
+  width:44px;height:54px;
+  background:#3a332a;border:1px solid #5a4f3f;border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;gap:1px;
+}
+.traybtn .g{font-size:19px;line-height:1.2;color:var(--paper)}
+.traybtn .dotpiece{width:26px;height:26px}
+.traybtn .c{font-size:9px;color:#c9a15a;font-family:sans-serif}
+.traybtn.on{background:var(--accent);border-color:#d8543e}
+.traybtn.off{opacity:.35;pointer-events:none}
+.trayCtrl{display:flex;gap:6px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.trayCtrl button{font-size:11px;padding:6px 8px}
+.trayCtrl button.primary{background:var(--accent);border-color:#d8543e}
+/* ===== 凡例(駒の動き) ===== */
+#legend{
+  width:min(96vw,520px);
+  background:var(--hand-bg);
+  border:1px solid #443c30;border-radius:8px;
+  margin:4px 0;
+  overflow:hidden;
+}
+#legendHead{
+  width:100%;text-align:left;
+  background:transparent;border:0;border-radius:0;
+  padding:8px 12px;font-size:12px;letter-spacing:.15em;
+  color:#c9bda5;display:flex;justify-content:space-between;align-items:center;
+}
+#legendBody{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:4px 8px 10px;justify-content:center;
+}
+#legendBody.hidden{display:none}
+.lgItem{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  width:64px;
+}
+.lgGlyph{
+  height:30px;display:flex;align-items:center;justify-content:center;gap:3px;
+}
+.lgGlyph .mini{
+  width:26px;height:30px;
+  clip-path:polygon(50% 3%, 89% 24%, 82% 97%, 18% 97%, 11% 24%);
+  background:linear-gradient(160deg,#fbeecb 0%,var(--piece-face) 55%,#e0c890 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:var(--ink);
+  padding-top:3px;
+}
+.lgGlyph .mini.pr{color:var(--ink-red)}
+.lgGlyph .dotpiece{width:28px;height:28px}
+.lgName{font-size:11px;color:var(--paper);letter-spacing:.05em}
+.lgNote{
+  width:100%;font-size:10px;color:#9a8f7c;line-height:1.7;
+  padding:2px 6px 0;text-align:center;
+}
+.lgDiag{border-radius:3px}
+#adbox{margin:10px 0 14px;min-height:50px;display:flex;justify-content:center}
+#overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);
+  display:none;align-items:center;justify-content:center;
+  z-index:50;
+}
+#overlay.show{display:flex}
+.panel{
+  background:#2b261f;border:1px solid #6a5c45;border-radius:12px;
+  padding:20px 24px;max-width:340px;width:92%;
+  text-align:center;
+  max-height:90vh;overflow-y:auto;
+}
+.panel h2{font-size:20px;letter-spacing:.2em;margin-bottom:12px}
+.panel p{font-size:13px;color:#c9bda5;margin-bottom:14px;line-height:1.7}
+.panel .row{display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+.panel button{padding:10px 16px;font-size:14px}
+.panel button.primary{background:var(--accent);border-color:#d8543e}
+.panel select{
+  font-family:inherit;font-size:14px;
+  background:#3a332a;color:var(--paper);
+  border:1px solid #5a4f3f;border-radius:6px;padding:8px;
+  width:100%;max-width:200px;
+}
+.panel label{font-size:12px;color:#9a8f7c;display:block;margin-bottom:4px;letter-spacing:.1em}
+.panel .field{margin-bottom:12px}
+.panel .modebtn{
+  display:inline-block;width:46%;margin:0 1% 8px;
+  padding:11px 4px;font-size:14px;letter-spacing:.05em;
+}
+.panel .modebtn.on{background:var(--accent);border-color:#d8543e}
+.stepper{display:flex;align-items:center;justify-content:center;gap:6px}
+.stepper button{padding:8px 10px;font-size:14px;font-family:sans-serif}
+.stepper .val{min-width:56px;font-size:20px;font-weight:700;color:#7fd98a;font-family:sans-serif}
+#thinkdots{display:inline-block;width:1.4em;text-align:left}
+</style>
+</head>
+<body>
+<header>
+  <h1>ポケット将棋<span class="sub">POCKET SHOGI</span></h1>
+  <div class="hbtns">
+    <button id="btnUndo">待った</button>
+    <button id="btnNew">新規</button>
+  </div>
+</header>
+
+<div id="status">&nbsp;</div>
+
+<div id="setupTray">
+  <div class="trayPieces" id="trayPieces"></div>
+  <div class="trayCtrl">
+    <button id="btnStd">標準配置</button>
+    <button id="btnClear">クリア</button>
+    <button id="btnDone" class="primary">配置完了</button>
+  </div>
+</div>
+
+<div class="handrow" id="handGote"><span class="label">相手</span></div>
+<div id="boardwrap"></div>
+<div class="handrow" id="handSente"><span class="label">自分</span></div>
+
+<div id="legend">
+  <button id="legendHead"><span id="legendTitle">駒の動き</span><span id="legendArrow">▲</span></button>
+  <div id="legendBody"></div>
+</div>
+
+<div id="adbox"></div>
+
+<div id="overlay">
+  <div class="panel" id="panelContent"></div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= 忍者AdMax ================= */
+var ADMAX_ID = ""; // ← 忍者AdMaxの広告IDをここに設定
+function injectAd(){
+  if(!ADMAX_ID) return;
+  var box = document.getElementById("adbox");
+  var f = document.createElement("iframe");
+  f.width = "320"; f.height = "50";
+  f.style.border = "0"; f.style.overflow = "hidden";
+  f.setAttribute("scrolling","no");
+  f.srcdoc = '<body style="margin:0"><script src="https://adm.shinobi.jp/s/' + ADMAX_ID + '"><\/script></body>';
+  box.appendChild(f);
+}
+
+/* ================= 定数 ================= */
+var SENTE = 0, GOTE = 1;
+var PROMOTE_MAP = {FU:"TO", KY:"NY", KE:"NK", GI:"NG", KA:"UM", HI:"RY"};
+var DEMOTE_MAP  = {TO:"FU", NY:"KY", NK:"KE", NG:"GI", UM:"KA", RY:"HI"};
+var KANJI = {FU:"歩", KY:"香", KE:"桂", GI:"銀", KI:"金", KA:"角", HI:"飛",
+             OU:"王", GYOKU:"玉",
+             TO:"と", NY:"杏", NK:"圭", NG:"全", UM:"馬", RY:"竜"};
+var HAND_ORDER = ["HI","KA","KI","GI","KE","KY","FU"];
+
+var COSTS = {FU:1, KY:3, KE:4, GI:5, KI:6, KA:8, HI:10, OU:0};
+var BASE_BUDGET = 63;
+var TRAY_ORDER = ["OU","HI","KA","KI","GI","KE","KY","FU"];
+
+/* ================= ドット絵スキン =================
+   12x12スプライト。'.'=透明。オリジナルデザイン(版権フリー)。 */
+var PAL = {
+  k:"#14100c", w:"#ffffff", r:"#e04040", o:"#f08838", y:"#f8d030",
+  g:"#48b048", G:"#1f6428", b:"#4878e0", B:"#24346e", c:"#74ccec",
+  p:"#f4a8c4", P:"#9048d0", t:"#c8955a", T:"#7a4e22", s:"#b8bcc8",
+  S:"#62667a", f:"#f2cba2", m:"#8a9448", M:"#4f5628", d:"#e8e8f0",
+  D:"#b8e4f4", O:"#c05818"
+};
+var NAMES = {FU:"歩", KY:"香", KE:"桂", GI:"銀", KI:"金", KA:"角", HI:"飛", OU:"王",
+             TO:"と金", NY:"成香", NK:"成桂", NG:"成銀", UM:"馬", RY:"竜"};
+var SKIN_NAMES = {kanji:"標準(漢字)", insect:"昆虫", army:"軍隊", sea:"かいてい", knight:"ナイト"};
+var SKIN_LABELS = {
+  insect: {FU:"アリ", KY:"トンボ", KE:"バッタ", GI:"チョウ", KI:"ミツバチ", KA:"クワガタ", HI:"スズメバチ", OU:"カブトムシ"},
+  army:   {FU:"歩兵", KY:"ミサイル", KE:"落下傘兵", GI:"装甲車", KI:"ヘリ", KA:"戦闘機", HI:"戦車", OU:"将軍"},
+  sea:    {FU:"エビ", KY:"イカ", KE:"トビウオ", GI:"フグ", KI:"カニ", KA:"タコ", HI:"サメ", OU:"クジラ"},
+  knight: {FU:"兵士", KY:"弓矢", KE:"軍馬", GI:"盾", KI:"聖剣", KA:"魔導士", HI:"城塞", OU:"王冠"}
+};
+var SPRITES = {
+insect:{
+FU:[ // アリ
+"....k......k....",
+".....k....k.....",
+"......k..k......",
+".....kkkkkk.....",
+"....kkTTTTkk....",
+"....kTTTTTTk....",
+".....kkkkkk.....",
+"..kkk.kTTk.kkk..",
+".k...kTTTTk...k.",
+"..kkk.kTTk.kkk..",
+".....kkkkkk.....",
+"....kTTTTTTk....",
+"...kTTtTTtTTk...",
+"...kTTTTTTTTk...",
+"....kTTTTTTk....",
+".....kkkkkk....."],
+KY:[ // トンボ
+"....kk....kk....",
+"...kggk..kggk...",
+"...kggkkkkggk...",
+"....kkkbbkkk....",
+"......kbbk......",
+".DDDDDkbbkDDDDD.",
+"kDDDDDkbbkDDDDDk",
+".DDDDkkbbkkDDDD.",
+"..DDDDkbbkDDDD..",
+"kDDDDDkbbkDDDDDk",
+".DDDDkkbbkkDDDD.",
+"..DD..kbbk..DD..",
+"......kbbk......",
+"......kbbk......",
+".......bb.......",
+".......kk......."],
+KE:[ // バッタ
+"..k.............",
+"...k............",
+"....k.......kkk.",
+".kkkk......kGGk.",
+"kgggk......kGGGk",
+"kgwggkkkkkkGGkGk",
+"kgggggggggGGk.Gk",
+".kggggggggggk.Gk",
+"..kkggggggkk..Gk",
+"....kkkkkk....Gk",
+"...k...k......Gk",
+"..k....k.....kGk",
+".............kk.",
+"................",
+"................",
+"................"],
+GI:[ // チョウ
+"......k..k......",
+".kkk..kTTk..kkk.",
+"kpppk.kTTk.kpppk",
+"kpwppkkTTkkppwpk",
+"kppppkkTTkkppppk",
+"kpppppkTTkpppppk",
+".kppppkTTkppppk.",
+"..kpppkTTkpppk..",
+".kppppkTTkppppk.",
+"kpppppkTTkpppppk",
+"kpoppkkTTkkppopk",
+"kpppk.kTTk.kpppk",
+".kkk..kTTk..kkk.",
+"......kTTk......",
+".......kk.......",
+"................"],
+KI:[ // ミツバチ
+".....k....k.....",
+"......k..k......",
+".....kkkkkk.....",
+"....kyyyyyyk....",
+"....kykyykyk....",
+"....kyyyyyyk....",
+"DDD..kkkkkk..DDD",
+"DDDDkyyyyyykDDDD",
+"DDDDkkkkkkkkDDDD",
+".DD.kyyyyyyk.DD.",
+"....kkkkkkkk....",
+"....kyyyyyyk....",
+".....kkkkkk.....",
+"......kyyk......",
+".......kk.......",
+".......k........"],
+KA:[ // クワガタ
+"..kk........kk..",
+".k..k......k..k.",
+".k...k....k...k.",
+"..k..k....k..k..",
+"..k...kkkk...k..",
+"...kkkkTTkkkk...",
+"....kTTTTTTk....",
+"...kTTtTTtTTk...",
+"..kkkkkkkkkkkk..",
+".kTTTTTTTTTTTTk.",
+"k.kTTTTTTTTTTk.k",
+"k.kTTtTTTTtTTk.k",
+"k.kTTTTTTTTTTk.k",
+"..kTTTTTTTTTTk..",
+"...kTTTTTTTTk...",
+"....kkkkkkkk...."],
+HI:[ // スズメバチ
+"....k.....k.....",
+".....k...k......",
+"....kkkkkkk.....",
+"...kokkokkok....",
+"...kooooooooook." ,
+"DD..kkkkkkk..DD.",
+"DDDDkoooookDDDD.",
+".DDD.kkkkk.DDD..",
+"..DD.koook.DD...",
+"....kooooook....",
+"....kkkkkkkk....",
+"....kooooook....",
+".....kkkkkk.....",
+"......kook......",
+".......kk.......",
+".......k........"],
+OU:[ // カブトムシ
+"....kk....kk....",
+".....kk..kk.....",
+"......kkkk......",
+".......kk.......",
+".......kk.......",
+"......kkkk......",
+".....kTTTTk.....",
+"....kTTTTTTk....",
+"..kkkkkkkkkkkk..",
+".kTTTTtttTTTTTk.",
+"k.kTTTTTTTTTTk.k",
+".kTTTTTTTTTTTTk.",
+"k.kTTTTTTTTTTk.k",
+"..kTTTTTTTTTTk..",
+"...kTTTTTTTTk...",
+"....kkkkkkkk...."]
+},
+army:{
+FU:[ // 歩兵
+"....kkkk....",
+"...kmmmmk...",
+"..kmmmmmmk..",
+"..kkkkkkkk..",
+"..kffffffk..",
+"..kfkffkfk..",
+"...kffffk...",
+"..kmmmmmmk..",
+".kmkmmmmkmk.",
+".kmkmmmmkmk.",
+"..kkmmmmkk..",
+"....k..k...."],
+KY:[ // ミサイル
+".....kk.....",
+"....krrk....",
+"....kssk....",
+"....kssk....",
+"....kssk....",
+"....kssk....",
+"..k.kssk.k..",
+".kkkksskkkk.",
+"....kssk....",
+"....kook....",
+"....yoyy....",
+".....yy....."],
+KE:[ // 落下傘兵
+"...kkkkkk...",
+".kkwwwwwwkk.",
+".kwwwwwwwwk.",
+".kwkwwwwkwk.",
+".kk.k..k.kk.",
+"..k..kk..k..",
+"...k.kk.k...",
+"....kmmk....",
+"....kffk....",
+"...kmmmmk...",
+"....kmmk....",
+"....k..k...."],
+GI:[ // 装甲車
+"............",
+"....kkkkk...",
+"...ksssssk..",
+"..kkkkkkkkk.",
+".kssssssssk.",
+".kssksskssk.",
+".kssssssssk.",
+".kkkkkkkkkk.",
+"..kSSkkSSk..",
+"..kSSkkSSk..",
+"...kk..kk...",
+"............"],
+KI:[ // ヘリコプター
+"kkkkkkkkkkkk",
+".....kk.....",
+"....kmmk....",
+"...kmmmmk...",
+"..kmckmmkkkk",
+"..kmmmmmk..k",
+"...kmmmmkkkk",
+"....kmmk....",
+".....kk.....",
+"..kkkkkkk...",
+"....k..k....",
+"...kk..kk..."],
+KA:[ // 戦闘機
+".....kk.....",
+"....kssk....",
+"....kssk....",
+"....kbbk....",
+"...kssssk...",
+"..kssssssk..",
+".kssssssssk.",
+"kssskssksssk",
+"kkk.kssk.kkk",
+"....kssk....",
+"...ks..sk...",
+"...kk..kk..."],
+HI:[ // 戦車
+"............",
+"..........k.",
+"....kkkkkk..",
+"...kmmmmk...",
+"..kmmmmmmkkk",
+".kkkkkkkkkk.",
+"kmMmMmMmMmk.",
+"kMmMmMmMmMk.",
+".kkkkkkkkk..",
+"..k.....k...",
+"............",
+"............"],
+OU:[ // 将軍
+"...kkkkkk...",
+"..kmmmmmmk..",
+".kmmkyykmmk.",
+".kmmmmmmmmk.",
+".kkkkkkkkkk.",
+"..kffffffk..",
+"..kfkffkfk..",
+"...kffffk...",
+"..kmmmmmmk..",
+".kmykmmkymk.",
+".kmmmmmmmmk.",
+"..kk....kk.."]
+},
+sea:{
+FU:[ // エビ
+"..........kk....",
+".........k..k...",
+"........k..k....",
+"......kkkok.....",
+".....koooook....",
+"....kowoooook...",
+"...kooookoook...",
+"..koooookoook...",
+"..kooookoook....",
+"..koookoook.....",
+"..koooooook.....",
+"...koooook......",
+"..kkoooook......",
+".kyykoook.......",
+"kyyyyk.kk.......",
+".kkkk..........."],
+KY:[ // イカ
+".......kk.......",
+"......kppk......",
+".....kppppk.....",
+"...kkppppppkk...",
+"..kppppppppppk..",
+"..kppppppppppk..",
+"..kppppppppppk..",
+"..kpwppppppwpk..",
+"..kppppppppppk..",
+"...kkkkkkkkkk...",
+"..kpk.kppk.kpk..",
+"..kpk.kppk.kpk..",
+".kpk..kppk..kpk.",
+".kpk..kppk..kpk.",
+".kk...kppk...kk.",
+"......kkkk......"],
+KE:[ // トビウオ
+".....kk....kk...",
+"....kDDk..kDDk..",
+"...kDDDDkkDDDDk.",
+"...kDDDDDDDDDDk.",
+"....kDDDDDDDDk..",
+"kk....kDDDDDDk..",
+"kck..kkkkkkkkk..",
+"kcckkccccccccck.",
+"kccccccccccwcck.",
+"kcckkccccccccck.",
+"kck..kkkkkkkkk..",
+"kk.....kDDDk....",
+"........kDDk....",
+".........kk.....",
+"................",
+"................"],
+GI:[ // フグ
+"....k..kk..k....",
+".....kkkkkk.....",
+"..k.kccccccck.k.",
+"..kcccccccccck..",
+".kkcwwccccwwckk.",
+"..kcwwccccwwck..",
+"k.kcccccccccck.k",
+"..kcccckkcccck..",
+"k.kcccccccccck.k",
+"..kcccccccccck..",
+".kkcccccccccckk.",
+"...kcccccccck...",
+"..k.kkkkkkkk.k..",
+"....k..kk..k....",
+"................",
+"................"],
+KI:[ // カニ
+".kkk........kkk.",
+"krrrk......krrrk",
+"krrkk......kkrrk",
+"krrrk.k..k.krrrk",
+".kkk.kwkkwk.kkk.",
+"..k.kkkkkkkk.k..",
+"...krrrrrrrrk...",
+"..krrrrrrrrrrk..",
+".krrwrrrrrrwrrk.",
+".krrrrrrrrrrrrk.",
+"..krrrrrrrrrrk..",
+"...kkkkkkkkkk...",
+"..k.k.k..k.k.k..",
+".k.k..k..k..k.k.",
+"k.k..........k.k",
+"................"],
+KA:[ // タコ
+".....kkkkkk.....",
+"...kkrrrrrrkk...",
+"..krrrrrrrrrrk..",
+".krrrrrrrrrrrrk.",
+".krrwwrrrrwwrrk.",
+".krrwkrrrrwkrrk.",
+".krrrrrkkrrrrrk.",
+".krrrrrrrrrrrrk.",
+"..krrrrrrrrrrk..",
+"..krkrrkkrrkrk..",
+".krrk.krrk.krrk.",
+".krrk.krrk.krrk.",
+"krrk..krrk..krrk",
+"krwk..krwk..krwk",
+".kk..k.kk.k..kk.",
+"................"],
+HI:[ // サメ
+"................",
+"......kk........",
+".k...kSSk.......",
+".kk.kSSSSk......",
+".kSkkSSSSSkkkk..",
+".kSSSSSSSSSSSSk.",
+".kSSSkSkSSSSwSSk",
+".kSSSSSSSSSSSSSk",
+".kSkwwwwwwwkwkk.",
+"..k.kkkwwwkkkk..",
+"......kSSk......",
+".......kSk......",
+"........kk......",
+"................",
+"................",
+"................"],
+OU:[ // クジラ
+"...c..c.........",
+"....cc..........",
+".....c..........",
+"....kkkkkkkk....",
+"..kkbbbbbbbbkk..",
+".kbbbbbbbbbbbbk.",
+"kbbbbbbbbbbbbbkk",
+"kbwbbbbbbbbbk.kk",
+"kbbbbbbbbbbk.kk.",
+"kwwwwwwbbbkkkk..",
+".kwwwwwbbk..kk..",
+"..kkkkkkkk......",
+"................",
+"................",
+"................",
+"................"]
+},
+knight:{
+FU:[ // 兵士
+"....kkkk....",
+"...kssssk...",
+"..kssssssk..",
+"..kkkkkkkk..",
+"..kffffffk..",
+"..kfkffkfk..",
+"...kffffk...",
+"..kggggggk..",
+".kgkggggkgk.",
+".kgkggggkgk.",
+"..kggggggk..",
+"....k..k...."],
+KY:[ // 弓矢
+".....kk.....",
+"....kssk....",
+"...kssssk...",
+"....kTTk....",
+"k...kTTk...k",
+"kk..kTTk..kk",
+".kk.kTTk.kk.",
+"..kkkTTkkk..",
+"....kTTk....",
+"...krrrrk...",
+"...kr..rk...",
+"............"],
+KE:[ // 軍馬
+"....kk......",
+"...ktkk.....",
+"...kttk.....",
+"..kttttk....",
+".kttkttkk...",
+"kttttttttk..",
+"kwkttttttk..",
+"kkkttttttk..",
+"..ktttttk...",
+"..kttkttk...",
+"..ktk.ktk...",
+"..kk...kk..."],
+GI:[ // 盾
+"..kkkkkkkk..",
+".kddddddddk.",
+".kdddkkdddk.",
+".kdddkkdddk.",
+".kdkkkkkkdk.",
+".kdddkkdddk.",
+".kdddkkdddk.",
+"..kddkkddk..",
+"..kddkkddk..",
+"...kdkkdk...",
+"....kkkk....",
+"............"],
+KI:[ // 聖剣
+".....kk.....",
+"....kyyk....",
+"....kyyk....",
+"....kyyk....",
+"....kyyk....",
+"....kyyk....",
+"....kyyk....",
+"..kkkyykkk..",
+".kyyykkyyyk.",
+"....kTTk....",
+"....kTTk....",
+"....kyyk...."],
+KA:[ // 魔導士
+".....kk.....",
+"....kPPk....",
+"....kPPk....",
+"...kPPPPk...",
+"...kPPPPk...",
+"..kPPPPPPk..",
+".kkkkkkkkkk.",
+"..kffffffk..",
+"..kfkffkfk..",
+".kwwwwwwwwk.",
+".kwwkPPkwwk.",
+"..kkkkkkkk.."],
+HI:[ // 城塞
+".kk..kk..kk.",
+".kskksskssk.",
+".kssssssssk.",
+".kssssssssk.",
+"..kssssssk..",
+"..kssssssk..",
+"..ksskkssk..",
+"..ksskkssk..",
+"..kssssssk..",
+".kssssssssk.",
+".kssssssssk.",
+".kkkkkkkkkk."],
+OU:[ // 王冠
+"............",
+"............",
+".k...kk...k.",
+".kk.kkkk.kk.",
+".kykkyykkyk.",
+".kyyyyyyyyk.",
+".kyryyyyryk.",
+".kyyyyyyyyk.",
+".kkkkkkkkkk.",
+"............",
+"............",
+"............"]
+}
+};
+
+/* 動き定義: df=前方向(+が前), dc=横 */
+var GOLD_STEPS = [[1,0],[1,-1],[1,1],[0,-1],[0,1],[-1,0]];
+var MOVE_DEF = {
+  FU:{steps:[[1,0]]},
+  KY:{slides:[[1,0]]},
+  KE:{steps:[[2,-1],[2,1]]},
+  GI:{steps:[[1,0],[1,-1],[1,1],[-1,-1],[-1,1]]},
+  KI:{steps:GOLD_STEPS},
+  TO:{steps:GOLD_STEPS},
+  NY:{steps:GOLD_STEPS},
+  NK:{steps:GOLD_STEPS},
+  NG:{steps:GOLD_STEPS},
+  KA:{slides:[[1,1],[1,-1],[-1,1],[-1,-1]]},
+  HI:{slides:[[1,0],[-1,0],[0,1],[0,-1]]},
+  UM:{slides:[[1,1],[1,-1],[-1,1],[-1,-1]], steps:[[1,0],[-1,0],[0,1],[0,-1]]},
+  RY:{slides:[[1,0],[-1,0],[0,1],[0,-1]], steps:[[1,1],[1,-1],[-1,1],[-1,-1]]},
+  OU:{steps:[[1,0],[1,-1],[1,1],[0,-1],[0,1],[-1,0],[-1,-1],[-1,1]]}
+};
+var PIECE_VAL = {FU:90, KY:315, KE:405, GI:495, KI:540, KA:855, HI:990, OU:15000,
+                 TO:560, NY:560, NK:560, NG:560, UM:990, RY:1400};
+var HAND_VAL  = {FU:100, KY:340, KE:430, GI:530, KI:580, KA:900, HI:1050};
+
+/* ================= 状態 ================= */
+/* 注意: history は window.history と衝突するため moveHistory を使用 */
+var board;
+var hands;
+var turn;
+var phase = "play";
+var gameMode = "cpu";
+var ruleMode = "std";
+var budget = BASE_BUDGET;
+var pieceSkin = "kanji";
+var playerSide = SENTE;
+var difficulty = 2;
+var moveHistory = [];
+var lastMove = null;
+var gameOver = false;
+var thinking = false;
+var selected = null;
+var legalCache = [];
+var soundOn = true;
+
+var setupQueue = [];
+var setupOwner = SENTE;
+var setupRemain = 0;
+var setupSelType = null;
+
+/* ================= 盤ユーティリティ ================= */
+function idx(r,c){ return r*9 + c; }
+function inBoard(r,c){ return r>=0 && r<9 && c>=0 && c<9; }
+function dirOf(o){ return o === SENTE ? -1 : 1; }
+function inPromoZone(o,r){ return o === SENTE ? r <= 2 : r >= 6; }
+function lastRank(o,r){ return o === SENTE ? r === 0 : r === 8; }
+function lastTwoRanks(o,r){ return o === SENTE ? r <= 1 : r >= 7; }
+function emptyHand(){ return {FU:0,KY:0,KE:0,GI:0,KI:0,KA:0,HI:0}; }
+function bottomSide(){ return gameMode === "cpu" ? playerSide : SENTE; }
+function humanControls(o){ return gameMode === "2p" ? true : o === playerSide; }
+function sideName(o){ return o === SENTE ? "先手" : "後手"; }
+function ownRows(o){ return o === SENTE ? [6,7,8] : [0,1,2]; }
+function backRank(o){ return o === SENTE ? 8 : 0; }
+function frontRank(o){ return o === SENTE ? 6 : 2; }
+
+function clearBoardAll(){
+  board = new Array(81).fill(null);
+  hands = [emptyHand(), emptyHand()];
+}
+function clearRowsOf(o){
+  var rows = ownRows(o);
+  for(var i=0;i<rows.length;i++){
+    for(var c=0;c<9;c++) board[idx(rows[i],c)] = null;
+  }
+}
+function placeStandardFor(o){
+  clearRowsOf(o);
+  var back = ["KY","KE","GI","KI","OU","KI","GI","KE","KY"];
+  var br = backRank(o), fr = frontRank(o);
+  var mr = o === SENTE ? 7 : 1;
+  for(var c=0;c<9;c++){
+    board[idx(br,c)] = {t:back[c], o:o};
+    board[idx(fr,c)] = {t:"FU", o:o};
+  }
+  if(o === SENTE){
+    board[idx(mr,1)] = {t:"KA", o:o};
+    board[idx(mr,7)] = {t:"HI", o:o};
+  }else{
+    board[idx(mr,1)] = {t:"HI", o:o};
+    board[idx(mr,7)] = {t:"KA", o:o};
+  }
+}
+function initStandardGame(){
+  clearBoardAll();
+  placeStandardFor(SENTE);
+  placeStandardFor(GOTE);
+  resetPlayState();
+}
+function resetPlayState(){
+  turn = SENTE;
+  moveHistory = [];
+  lastMove = null;
+  gameOver = false;
+  thinking = false;
+  selected = null;
+  legalCache = [];
+  phase = "play";
+}
+
+function snapshot(){
+  return {
+    board: board.map(function(p){ return p ? {t:p.t, o:p.o} : null; }),
+    hands: [Object.assign({}, hands[0]), Object.assign({}, hands[1])],
+    turn: turn,
+    lastMove: lastMove ? Object.assign({}, lastMove) : null
+  };
+}
+function restore(s){
+  board = s.board.map(function(p){ return p ? {t:p.t, o:p.o} : null; });
+  hands = [Object.assign({}, s.hands[0]), Object.assign({}, s.hands[1])];
+  turn = s.turn;
+  lastMove = s.lastMove ? Object.assign({}, s.lastMove) : null;
+  gameOver = false;
+}
+
+/* ================= 手の適用/戻し ================= */
+function applyMove(m){
+  var undo = {m:m, captured:null, prevType:null};
+  if(m.drop){
+    board[m.to] = {t:m.drop, o:m.owner};
+    hands[m.owner][m.drop]--;
+  }else{
+    var p = board[m.from];
+    undo.prevType = p.t;
+    var cap = board[m.to];
+    if(cap){
+      undo.captured = cap;
+      var base = DEMOTE_MAP[cap.t] || cap.t;
+      if(base !== "OU") hands[p.o][base]++;
+    }
+    board[m.to] = p;
+    board[m.from] = null;
+    if(m.promote) p.t = PROMOTE_MAP[p.t];
+  }
+  return undo;
+}
+function undoMove(undo){
+  var m = undo.m;
+  var o = m.owner;
+  if(m.drop){
+    board[m.to] = null;
+    hands[o][m.drop]++;
+  }else{
+    var p = board[m.to];
+    p.t = undo.prevType;
+    board[m.from] = p;
+    board[m.to] = undo.captured;
+    if(undo.captured){
+      var base = DEMOTE_MAP[undo.captured.t] || undo.captured.t;
+      if(base !== "OU") hands[o][base]--;
+    }
+  }
+}
+
+/* ================= 利き判定 ================= */
+function findKing(o){
+  for(var i=0;i<81;i++){
+    var p = board[i];
+    if(p && p.o === o && p.t === "OU") return i;
+  }
+  return -1;
+}
+function isAttacked(target, by){
+  var tr = Math.floor(target/9), tc = target%9;
+  for(var i=0;i<81;i++){
+    var p = board[i];
+    if(!p || p.o !== by) continue;
+    var r = Math.floor(i/9), c = i%9;
+    var def = MOVE_DEF[p.t];
+    var d = dirOf(by);
+    if(def.steps){
+      for(var s=0;s<def.steps.length;s++){
+        var nr = r + d*def.steps[s][0], nc = c + def.steps[s][1];
+        if(nr === tr && nc === tc) return true;
+      }
+    }
+    if(def.slides){
+      for(var s2=0;s2<def.slides.length;s2++){
+        var dr = d*def.slides[s2][0], dc = def.slides[s2][1];
+        var nr2 = r + dr, nc2 = c + dc;
+        while(inBoard(nr2,nc2)){
+          if(nr2 === tr && nc2 === tc) return true;
+          if(board[idx(nr2,nc2)]) break;
+          nr2 += dr; nc2 += dc;
+        }
+      }
+    }
+  }
+  return false;
+}
+function inCheck(o){
+  var k = findKing(o);
+  if(k < 0) return false;
+  return isAttacked(k, 1-o);
+}
+
+/* ================= 手生成 ================= */
+function genPseudoMoves(o, opts){
+  opts = opts || {};
+  var moves = [];
+  var i, r, c;
+  for(i=0;i<81;i++){
+    var p = board[i];
+    if(!p || p.o !== o) continue;
+    r = Math.floor(i/9); c = i%9;
+    var def = MOVE_DEF[p.t];
+    var d = dirOf(o);
+    if(def.steps){
+      for(var s=0;s<def.steps.length;s++){
+        addTarget(moves, o, p, i, r + d*def.steps[s][0], c + def.steps[s][1]);
+      }
+    }
+    if(def.slides){
+      for(var s2=0;s2<def.slides.length;s2++){
+        var dr = d*def.slides[s2][0], dc = def.slides[s2][1];
+        var nr = r + dr, nc = c + dc;
+        while(inBoard(nr,nc)){
+          var blocked = !!board[idx(nr,nc)];
+          addTarget(moves, o, p, i, nr, nc);
+          if(blocked) break;
+          nr += dr; nc += dc;
+        }
+      }
+    }
+  }
+  var kingSquares = null;
+  if(opts.dropNearKings){
+    kingSquares = [findKing(SENTE), findKing(GOTE)];
+  }
+  for(var ht=0; ht<HAND_ORDER.length; ht++){
+    var t = HAND_ORDER[ht];
+    if(hands[o][t] <= 0) continue;
+    for(var j=0;j<81;j++){
+      if(board[j]) continue;
+      var jr = Math.floor(j/9), jc = j%9;
+      if((t === "FU" || t === "KY") && lastRank(o, jr)) continue;
+      if(t === "KE" && lastTwoRanks(o, jr)) continue;
+      if(t === "FU" && hasPawnOnFile(o, jc)) continue;
+      if(kingSquares){
+        var near = false;
+        for(var k=0;k<2;k++){
+          var ks = kingSquares[k];
+          if(ks < 0) continue;
+          var kr = Math.floor(ks/9), kc = ks%9;
+          if(Math.abs(kr-jr) <= 2 && Math.abs(kc-jc) <= 2){ near = true; break; }
+        }
+        if(!near) continue;
+      }
+      moves.push({owner:o, drop:t, from:-1, to:j, promote:false});
+    }
+  }
+  return moves;
+}
+function addTarget(moves, o, p, from, nr, nc){
+  if(!inBoard(nr,nc)) return;
+  var dst = board[idx(nr,nc)];
+  if(dst && dst.o === o) return;
+  var to = idx(nr,nc);
+  var fr = Math.floor(from/9);
+  var canP = PROMOTE_MAP[p.t] && (inPromoZone(o,nr) || inPromoZone(o,fr));
+  var mustP = false;
+  if(p.t === "FU" || p.t === "KY") mustP = lastRank(o,nr);
+  else if(p.t === "KE") mustP = lastTwoRanks(o,nr);
+  if(mustP){
+    moves.push({owner:o, drop:null, from:from, to:to, promote:true});
+  }else if(canP){
+    moves.push({owner:o, drop:null, from:from, to:to, promote:true});
+    moves.push({owner:o, drop:null, from:from, to:to, promote:false});
+  }else{
+    moves.push({owner:o, drop:null, from:from, to:to, promote:false});
+  }
+}
+function hasPawnOnFile(o, c){
+  for(var r=0;r<9;r++){
+    var p = board[idx(r,c)];
+    if(p && p.o === o && p.t === "FU") return true;
+  }
+  return false;
+}
+
+function genLegalMoves(o, opts){
+  opts = opts || {};
+  var pseudo = genPseudoMoves(o, opts);
+  var legal = [];
+  for(var i=0;i<pseudo.length;i++){
+    var m = pseudo[i];
+    var u = applyMove(m);
+    var ok = !inCheck(o);
+    if(ok && m.drop === "FU" && !opts.skipUchifu){
+      var opp = 1 - o;
+      if(inCheck(opp)){
+        var oppMoves = genLegalMoves(opp, {skipUchifu:true});
+        if(oppMoves.length === 0) ok = false;
+      }
+    }
+    undoMove(u);
+    if(ok) legal.push(m);
+  }
+  return legal;
+}
+
+/* ================= 編成(自由配置) ================= */
+function countTypeOf(o, t){
+  var n = 0;
+  for(var i=0;i<81;i++){
+    var p = board[i];
+    if(p && p.o === o && p.t === t) n++;
+  }
+  return n;
+}
+function canPlaceAt(o, t, ri, remain){
+  if(board[ri]) return false;
+  var r = Math.floor(ri/9), c = ri%9;
+  if(ownRows(o).indexOf(r) < 0) return false;
+  if(COSTS[t] > remain) return false;
+  if(t === "OU" && countTypeOf(o,"OU") >= 1) return false;
+  if(t === "FU" && hasPawnOnFile(o, c)) return false;
+  return true;
+}
+function placeSetupPiece(o, t, ri){
+  board[ri] = {t:t, o:o};
+  setupRemain -= COSTS[t];
+}
+function removeSetupPiece(o, ri){
+  var p = board[ri];
+  if(!p || p.o !== o) return;
+  setupRemain += COSTS[p.t];
+  board[ri] = null;
+}
+
+function genCpuArmy(o, bud){
+  clearRowsOf(o);
+  if(bud >= BASE_BUDGET && Math.random() < 0.5){
+    placeStandardFor(o);
+    return "standard";
+  }
+  var br = backRank(o), fr = frontRank(o);
+  var mr = o === SENTE ? 7 : 1;
+  var rem = bud;
+  var kc = 3 + Math.floor(Math.random()*3);
+  board[idx(br,kc)] = {t:"OU", o:o};
+  if(rem >= COSTS.FU){
+    board[idx(fr,kc)] = {t:"FU", o:o};
+    rem -= COSTS.FU;
+  }
+  var pool = ["FU","FU","FU","FU","FU","FU","KY","KE","GI","GI","KI","KI","KA","HI"];
+  var tries = 0;
+  while(tries < 300 && rem > 0){
+    tries++;
+    var t = pool[Math.floor(Math.random()*pool.length)];
+    if(COSTS[t] > rem) continue;
+    var ri = -1;
+    if(t === "FU"){
+      var cc = Math.floor(Math.random()*9);
+      if(hasPawnOnFile(o, cc)) continue;
+      if(board[idx(fr,cc)]) continue;
+      ri = idx(fr,cc);
+    }else if(t === "KY" || t === "KE"){
+      var rr = Math.random() < 0.5 ? br : mr;
+      var cc2 = Math.floor(Math.random()*9);
+      if(board[idx(rr,cc2)]) continue;
+      ri = idx(rr,cc2);
+    }else{
+      var rows = ownRows(o);
+      var rr2 = rows[Math.floor(Math.random()*rows.length)];
+      var cc3 = Math.floor(Math.random()*9);
+      if(rr2 === fr && t !== "GI" && Math.random() < 0.5) continue;
+      if(board[idx(rr2,cc3)]) continue;
+      ri = idx(rr2,cc3);
+    }
+    board[ri] = {t:t, o:o};
+    rem -= COSTS[t];
+  }
+  return "generated";
+}
+
+/* ================= 評価とAI ================= */
+function evaluate(o){
+  var score = 0;
+  for(var i=0;i<81;i++){
+    var p = board[i];
+    if(!p) continue;
+    var v = PIECE_VAL[p.t];
+    var r = Math.floor(i/9);
+    var adv = p.o === SENTE ? (8-r) : r;
+    v += adv * 3;
+    score += (p.o === o) ? v : -v;
+  }
+  for(var side=0; side<2; side++){
+    var sign = (side === o) ? 1 : -1;
+    for(var h=0;h<HAND_ORDER.length;h++){
+      var t = HAND_ORDER[h];
+      score += sign * hands[side][t] * HAND_VAL[t];
+    }
+  }
+  return score;
+}
+
+var aiNodes = 0, AI_NODE_CAP = 150000;
+
+function negamax(depth, alpha, beta, o, ply){
+  aiNodes++;
+  if(findKing(o) < 0) return -(100000 - ply);
+  if(findKing(1-o) < 0) return 100000 - ply;
+  if(depth === 0 || aiNodes > AI_NODE_CAP){
+    return evaluate(o);
+  }
+  var opts = ply > 0 ? {dropNearKings:true} : {};
+  var moves = genLegalMoves(o, opts);
+  if(moves.length === 0){
+    if(opts.dropNearKings){
+      moves = genLegalMoves(o, {});
+    }
+    if(moves.length === 0) return -(100000 - ply);
+  }
+  orderMoves(moves);
+  var best = -Infinity;
+  for(var i=0;i<moves.length;i++){
+    var u = applyMove(moves[i]);
+    var v = -negamax(depth-1, -beta, -alpha, 1-o, ply+1);
+    undoMove(u);
+    if(v > best) best = v;
+    if(v > alpha) alpha = v;
+    if(alpha >= beta) break;
+  }
+  return best;
+}
+function orderMoves(moves){
+  for(var i=0;i<moves.length;i++){
+    var m = moves[i];
+    var s = 0;
+    var cap = board[m.to];
+    if(cap) s += PIECE_VAL[cap.t] * 10;
+    if(m.promote) s += 400;
+    if(m.drop) s -= 50;
+    m._s = s;
+  }
+  moves.sort(function(a,b){ return b._s - a._s; });
+}
+
+function aiPickMove(){
+  var o = 1 - playerSide;
+  var moves = genLegalMoves(o, {});
+  if(moves.length === 0) return null;
+  orderMoves(moves);
+  var depth = difficulty;
+  aiNodes = 0;
+  var best = null, bestV = -Infinity;
+  for(var i=0;i<moves.length;i++){
+    var u = applyMove(moves[i]);
+    var v = -negamax(depth-1, -Infinity, Infinity, playerSide, 1);
+    undoMove(u);
+    if(difficulty === 1) v += (Math.random()*300 - 150);
+    if(v > bestV){ bestV = v; best = moves[i]; }
+  }
+  return best;
+}
+
+/* ================= サウンド ================= */
+var actx = null;
+function ensureAudio(){
+  if(!actx){
+    try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  }
+  if(actx && actx.state === "suspended") actx.resume();
+}
+function playKoma(){
+  if(!soundOn || !actx) return;
+  var t = actx.currentTime;
+  var o1 = actx.createOscillator();
+  var g1 = actx.createGain();
+  o1.type = "triangle";
+  o1.frequency.setValueAtTime(880, t);
+  o1.frequency.exponentialRampToValueAtTime(220, t + 0.05);
+  g1.gain.setValueAtTime(0.25, t);
+  g1.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  o1.connect(g1);
+  g1.connect(actx.destination);
+  o1.start(t); o1.stop(t + 0.1);
+  var len = Math.floor(actx.sampleRate * 0.04);
+  var buf = actx.createBuffer(1, len, actx.sampleRate);
+  var ch = buf.getChannelData(0);
+  for(var i=0;i<len;i++) ch[i] = (Math.random()*2-1) * (1 - i/len);
+  var src = actx.createBufferSource();
+  var g2 = actx.createGain();
+  g2.gain.setValueAtTime(0.18, t);
+  src.buffer = buf;
+  src.connect(g2);
+  g2.connect(actx.destination);
+  src.start(t);
+}
+function playCheck(){
+  if(!soundOn || !actx) return;
+  var t = actx.currentTime;
+  var o = actx.createOscillator();
+  var g = actx.createGain();
+  o.type = "square";
+  o.frequency.setValueAtTime(660, t);
+  o.frequency.setValueAtTime(990, t + 0.08);
+  g.gain.setValueAtTime(0.12, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  o.connect(g);
+  g.connect(actx.destination);
+  o.start(t); o.stop(t + 0.24);
+}
+
+/* ================= ドット絵レンダリング ================= */
+var spriteCache = {};
+/* base=元駒種, promoted=成りリング, side=SENTE青/GOTE赤の帯, rotated=180度回転 */
+function spriteURL(skin, base, promoted, side, rotated){
+  var key = skin + "|" + base + "|" + (promoted?1:0) + "|" + side + "|" + (rotated?1:0);
+  if(spriteCache[key]) return spriteCache[key];
+  var rows = SPRITES[skin][base];
+  var n = rows.length;      // 12 or 16
+  var W = n + 4;
+  var cv = document.createElement("canvas");
+  cv.width = W; cv.height = W;
+  var ctx = cv.getContext("2d");
+  ctx.save();
+  if(rotated){
+    ctx.translate(W,W);
+    ctx.rotate(Math.PI);
+  }
+  // スプライト本体
+  for(var r=0;r<n;r++){
+    var row = rows[r];
+    for(var c=0;c<n;c++){
+      var ch = row.charAt(c);
+      if(ch === ".") continue;
+      ctx.fillStyle = PAL[ch] || "#f0f";
+      ctx.fillRect(c+2, r+1, 1, 1);
+    }
+  }
+  // 陣営カラーの帯(足元)
+  var barW = Math.floor(n*2/3);
+  ctx.fillStyle = side === SENTE ? "#3a6cf0" : "#e04040";
+  ctx.fillRect(Math.floor((W-barW)/2), W-2, barW, 2);
+  ctx.restore();
+  // 成りリング(金枠)は回転の影響を受けない外周
+  if(promoted){
+    ctx.fillStyle = "#f5c518";
+    ctx.fillRect(0,0,W,1);
+    ctx.fillRect(0,W-1,W,1);
+    ctx.fillRect(0,0,1,W);
+    ctx.fillRect(W-1,0,1,W);
+  }
+  var url = cv.toDataURL();
+  spriteCache[key] = url;
+  return url;
+}
+function makeDotImg(skin, base, promoted, side, rotated){
+  var img = document.createElement("img");
+  img.className = "dotpiece";
+  img.src = spriteURL(skin, base, promoted, side, rotated);
+  img.alt = "";
+  return img;
+}
+
+/* ================= 描画 ================= */
+var boardEl = document.getElementById("boardwrap");
+var statusEl = document.getElementById("status");
+var handGoteEl = document.getElementById("handGote");
+var handSenteEl = document.getElementById("handSente");
+var setupTrayEl = document.getElementById("setupTray");
+var trayPiecesEl = document.getElementById("trayPieces");
+var legendBodyEl = document.getElementById("legendBody");
+var legendTitleEl = document.getElementById("legendTitle");
+var cells = [];
+
+function buildBoard(){
+  boardEl.innerHTML = "";
+  cells = [];
+  for(var di=0; di<81; di++){
+    var cell = document.createElement("div");
+    cell.className = "cell";
+    (function(dispIdx, el){
+      el.addEventListener("click", function(){ onCellTap(dispIdx); });
+    })(di, cell);
+    boardEl.appendChild(cell);
+    cells.push(cell);
+  }
+}
+function dispToReal(di){
+  return bottomSide() === SENTE ? di : 80 - di;
+}
+function makeKomaEl(p, bottom){
+  if(pieceSkin === "kanji"){
+    var k = document.createElement("div");
+    k.className = "koma";
+    var ch;
+    if(p.t === "OU"){
+      if(gameMode === "2p") ch = p.o === SENTE ? KANJI.GYOKU : KANJI.OU;
+      else ch = p.o === playerSide ? KANJI.GYOKU : KANJI.OU;
+    }else{
+      ch = KANJI[p.t];
+    }
+    if(p.o !== bottom) k.classList.add("gote");
+    if(DEMOTE_MAP[p.t]) k.classList.add("promoted");
+    k.textContent = ch;
+    return k;
+  }
+  var base = DEMOTE_MAP[p.t] || p.t;
+  var promoted = !!DEMOTE_MAP[p.t];
+  return makeDotImg(pieceSkin, base, promoted, p.o, p.o !== bottom);
+}
+function render(){
+  var bottom = bottomSide();
+  var hlSet = {}, placeSet = {};
+  if(phase === "play"){
+    for(var i=0;i<legalCache.length;i++) hlSet[legalCache[i].to] = true;
+  }else if(phase === "setup" && setupSelType){
+    for(var j=0;j<81;j++){
+      if(canPlaceAt(setupOwner, setupSelType, j, setupRemain)) placeSet[j] = true;
+    }
+  }
+  for(var di=0; di<81; di++){
+    var ri = dispToReal(di);
+    var cell = cells[di];
+    var p = board[ri];
+    cell.innerHTML = "";
+    cell.className = "cell";
+    if(p){
+      cell.appendChild(makeKomaEl(p, bottom));
+    }else{
+      if(hlSet[ri]) cell.classList.add("empty");
+    }
+    if(hlSet[ri]) cell.classList.add("hl");
+    if(placeSet[ri]) cell.classList.add("place");
+    if(phase === "play" && lastMove && (lastMove.to === ri || lastMove.from === ri)) cell.classList.add("last");
+    if(phase === "play" && selected && selected.kind === "board" && selected.idx === ri) cell.classList.add("sel");
+  }
+  if(phase === "setup"){
+    setupTrayEl.classList.add("show");
+    handGoteEl.style.display = "none";
+    handSenteEl.style.display = "none";
+    renderTray();
+  }else{
+    setupTrayEl.classList.remove("show");
+    handGoteEl.style.display = "";
+    handSenteEl.style.display = "";
+    var bottomLabel, topLabel;
+    if(gameMode === "2p"){ bottomLabel = "先手"; topLabel = "後手"; }
+    else{ bottomLabel = "自分"; topLabel = "相手"; }
+    renderHand(handSenteEl, bottom, bottomLabel);
+    renderHand(handGoteEl, 1-bottom, topLabel);
+  }
+  renderStatus();
+}
+function renderHand(el, o, label){
+  el.innerHTML = "";
+  el.className = "handrow";
+  if(!gameOver && !thinking && humanControls(o) && turn === o) el.classList.add("active");
+  var lb = document.createElement("span");
+  lb.className = "label";
+  lb.textContent = label;
+  el.appendChild(lb);
+  for(var i=0;i<HAND_ORDER.length;i++){
+    var t = HAND_ORDER[i];
+    var n = hands[o][t];
+    if(n <= 0) continue;
+    var hp = document.createElement("div");
+    hp.className = "handpiece";
+    if(selected && selected.kind === "hand" && selected.piece === t && selected.owner === o){
+      hp.classList.add("sel");
+    }
+    hp.appendChild(makeKomaEl({t:t, o:o}, bottomSide()));
+    if(n > 1){
+      var cnt = document.createElement("span");
+      cnt.className = "cnt";
+      cnt.textContent = "×" + n;
+      hp.appendChild(cnt);
+    }
+    if(humanControls(o)){
+      (function(pt, owner, elp){
+        elp.addEventListener("click", function(){ onHandTap(pt, owner); });
+      })(t, o, hp);
+    }
+    el.appendChild(hp);
+  }
+}
+function renderTray(){
+  trayPiecesEl.innerHTML = "";
+  for(var i=0;i<TRAY_ORDER.length;i++){
+    var t = TRAY_ORDER[i];
+    var btn = document.createElement("div");
+    btn.className = "traybtn";
+    var kingPlaced = countTypeOf(setupOwner, "OU") >= 1;
+    var disabled = (t === "OU") ? kingPlaced : (COSTS[t] > setupRemain);
+    if(disabled) btn.classList.add("off");
+    if(setupSelType === t) btn.classList.add("on");
+    if(pieceSkin === "kanji"){
+      var g = document.createElement("span");
+      g.className = "g";
+      g.textContent = KANJI[t];
+      btn.appendChild(g);
+    }else{
+      btn.appendChild(makeDotImg(pieceSkin, t, false, setupOwner, false));
+    }
+    var c = document.createElement("span");
+    c.className = "c";
+    c.textContent = t === "OU" ? "必須" : "コスト" + COSTS[t];
+    btn.appendChild(c);
+    (function(tt, el){
+      el.addEventListener("click", function(){
+        setupSelType = (setupSelType === tt) ? null : tt;
+        render();
+      });
+    })(t, btn);
+    trayPiecesEl.appendChild(btn);
+  }
+  document.getElementById("btnStd").disabled = budget < BASE_BUDGET;
+  document.getElementById("btnDone").disabled = countTypeOf(setupOwner, "OU") < 1;
+}
+function renderStatus(){
+  if(gameOver) return;
+  var html;
+  if(phase === "setup"){
+    var who = gameMode === "2p" ? sideName(setupOwner) + "の配置" : "駒の配置";
+    html = who + ' — のこりコスト <span class="cost">' + setupRemain + '</span>';
+  }else if(thinking){
+    html = 'AIが考えています<span id="thinkdots">…</span>';
+  }else if(gameMode === "2p"){
+    var chk = inCheck(turn) ? '<span class="check">王手!</span> ' : "";
+    html = chk + sideName(turn) + "の番です";
+  }else if(turn === playerSide){
+    html = inCheck(playerSide) ? '<span class="check">王手!</span> あなたの番です' : "あなたの番です";
+  }else{
+    html = "相手の番です";
+  }
+  statusEl.innerHTML = html;
+}
+
+/* ================= 凡例(駒の動き/スキン対応表) ================= */
+function drawMoveDiagram(cv, type){
+  var N = 5, CELL = 22, SZ = N*CELL;
+  cv.width = SZ; cv.height = SZ;
+  cv.style.width = "55px"; cv.style.height = "55px";
+  cv.className = "lgDiag";
+  var ctx = cv.getContext("2d");
+  ctx.fillStyle = "#d9a85c";
+  ctx.fillRect(0,0,SZ,SZ);
+  ctx.strokeStyle = "#7a5522";
+  ctx.lineWidth = 1;
+  for(var i=0;i<=N;i++){
+    ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,SZ); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(SZ,i*CELL); ctx.stroke();
+  }
+  var cx = 2*CELL + CELL/2, cy = 2*CELL + CELL/2;
+  var def = MOVE_DEF[type];
+  // スライド(走り): 端まで矢印
+  if(def.slides){
+    ctx.strokeStyle = "#c85a20";
+    ctx.fillStyle = "#c85a20";
+    ctx.lineWidth = 3;
+    for(var s=0;s<def.slides.length;s++){
+      var dr = -def.slides[s][0], dc = def.slides[s][1]; // 前=上
+      var ex = cx + dc*(2*CELL+4), ey = cy + dr*(2*CELL+4);
+      ctx.beginPath(); ctx.moveTo(cx + dc*CELL*0.5, cy + dr*CELL*0.5);
+      ctx.lineTo(ex, ey); ctx.stroke();
+      // 矢じり
+      var ang = Math.atan2(ey-cy, ex-cx);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 8*Math.cos(ang - 0.4), ey - 8*Math.sin(ang - 0.4));
+      ctx.lineTo(ex - 8*Math.cos(ang + 0.4), ey - 8*Math.sin(ang + 0.4));
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // ステップ: 緑丸
+  if(def.steps){
+    ctx.fillStyle = "#2e8b3e";
+    for(var st=0;st<def.steps.length;st++){
+      var r2 = 2 - def.steps[st][0], c2 = 2 + def.steps[st][1];
+      if(r2<0||r2>=N||c2<0||c2>=N) continue;
+      ctx.beginPath();
+      ctx.arc(c2*CELL+CELL/2, r2*CELL+CELL/2, 6, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  // 中央=駒
+  ctx.fillStyle = "#2a1c08";
+  ctx.fillRect(2*CELL+4, 2*CELL+4, CELL-8, CELL-8);
+}
+function renderLegend(){
+  legendBodyEl.innerHTML = "";
+  /* 歩→と金 のようにペア順で全14駒を表示 */
+  var order = ["FU","TO","KY","NY","KE","NK","GI","NG","KI","KA","UM","HI","RY","OU"];
+  var isKanji = pieceSkin === "kanji";
+  legendTitleEl.textContent = isKanji
+    ? "駒の動き一覧(成駒含む)"
+    : SKIN_NAMES[pieceSkin] + "スキン — 駒の対応と動き(成駒含む)";
+  for(var i=0;i<order.length;i++){
+    var t = order[i];
+    var promoted = !!DEMOTE_MAP[t];
+    var base = DEMOTE_MAP[t] || t;
+    var item = document.createElement("div");
+    item.className = "lgItem";
+    var gl = document.createElement("div");
+    gl.className = "lgGlyph";
+    if(isKanji){
+      var mini = document.createElement("div");
+      mini.className = "mini" + (promoted ? " pr" : "");
+      mini.textContent = KANJI[t];
+      gl.appendChild(mini);
+    }else{
+      /* ドット絵(成りは金枠付き) = 漢字駒 */
+      gl.appendChild(makeDotImg(pieceSkin, base, promoted, SENTE, false));
+      var eq = document.createElement("span");
+      eq.textContent = "=";
+      eq.style.fontSize = "11px";
+      gl.appendChild(eq);
+      var mini2 = document.createElement("div");
+      mini2.className = "mini" + (promoted ? " pr" : "");
+      mini2.textContent = KANJI[t];
+      gl.appendChild(mini2);
+    }
+    var cv = document.createElement("canvas");
+    drawMoveDiagram(cv, t);
+    var nm = document.createElement("span");
+    nm.className = "lgName";
+    if(isKanji){
+      nm.textContent = NAMES[t];
+    }else{
+      nm.textContent = promoted
+        ? SKIN_LABELS[pieceSkin][base] + "・成"
+        : SKIN_LABELS[pieceSkin][base];
+    }
+    item.appendChild(gl);
+    item.appendChild(cv);
+    item.appendChild(nm);
+    legendBodyEl.appendChild(item);
+  }
+  var note = document.createElement("div");
+  note.className = "lgNote";
+  note.textContent = isKanji
+    ? "緑丸=1マス移動 / オレンジ矢印=何マスでも進める(走り)。赤い駒は成り駒。"
+    : "緑丸=1マス移動 / オレンジ矢印=何マスでも進める(走り)。金枠のキャラ=成り駒。青帯=先手、赤帯=後手。";
+  legendBodyEl.appendChild(note);
+}
+document.getElementById("legendHead").addEventListener("click", function(){
+  var hidden = legendBodyEl.classList.toggle("hidden");
+  document.getElementById("legendArrow").textContent = hidden ? "▼" : "▲";
+});
+
+/* ================= 入力 ================= */
+function canActNow(){
+  if(gameOver || thinking) return false;
+  return humanControls(turn);
+}
+function onCellTap(di){
+  ensureAudio();
+  var ri = dispToReal(di);
+  if(phase === "setup"){
+    onSetupTap(ri);
+    return;
+  }
+  if(!canActNow()) return;
+  var p = board[ri];
+  if(selected){
+    var candidates = [];
+    for(var i=0;i<legalCache.length;i++){
+      if(legalCache[i].to === ri) candidates.push(legalCache[i]);
+    }
+    if(candidates.length > 0){
+      if(candidates.length === 1){
+        commitHumanMove(candidates[0]);
+      }else{
+        askPromotion(candidates);
+      }
+      return;
+    }
+  }
+  if(p && p.o === turn && humanControls(turn)){
+    if(selected && selected.kind === "board" && selected.idx === ri){
+      clearSelection();
+    }else{
+      selected = {kind:"board", idx:ri};
+      var all = genLegalMoves(turn, {});
+      legalCache = [];
+      for(var j=0;j<all.length;j++){
+        if(!all[j].drop && all[j].from === ri) legalCache.push(all[j]);
+      }
+    }
+    render();
+    return;
+  }
+  clearSelection();
+  render();
+}
+function onSetupTap(ri){
+  var p = board[ri];
+  if(p && p.o === setupOwner){
+    removeSetupPiece(setupOwner, ri);
+    render();
+    return;
+  }
+  if(setupSelType && canPlaceAt(setupOwner, setupSelType, ri, setupRemain)){
+    placeSetupPiece(setupOwner, setupSelType, ri);
+    playKoma();
+    if(setupSelType === "OU") setupSelType = null;
+    if(setupSelType && COSTS[setupSelType] > setupRemain) setupSelType = null;
+    render();
+  }
+}
+function onHandTap(t, owner){
+  ensureAudio();
+  if(phase !== "play" || !canActNow()) return;
+  if(owner !== turn) return;
+  if(selected && selected.kind === "hand" && selected.piece === t && selected.owner === owner){
+    clearSelection();
+  }else{
+    selected = {kind:"hand", piece:t, owner:owner};
+    var all = genLegalMoves(turn, {});
+    legalCache = [];
+    for(var j=0;j<all.length;j++){
+      if(all[j].drop === t) legalCache.push(all[j]);
+    }
+  }
+  render();
+}
+function clearSelection(){
+  selected = null;
+  legalCache = [];
+}
+function askPromotion(candidates){
+  var pm = null, nm = null;
+  for(var i=0;i<candidates.length;i++){
+    if(candidates[i].promote) pm = candidates[i];
+    else nm = candidates[i];
+  }
+  showPanel(
+    '<h2>成りますか?</h2>' +
+    '<div class="row">' +
+    '<button class="primary" id="pmYes">成る</button>' +
+    '<button id="pmNo">成らない</button>' +
+    '</div>'
+  );
+  document.getElementById("pmYes").addEventListener("click", function(){
+    hidePanel(); commitHumanMove(pm);
+  });
+  document.getElementById("pmNo").addEventListener("click", function(){
+    hidePanel(); commitHumanMove(nm);
+  });
+}
+function commitHumanMove(m){
+  moveHistory.push(snapshot());
+  applyMove(m);
+  lastMove = {from:m.from, to:m.to, drop:m.drop};
+  clearSelection();
+  playKoma();
+  turn = 1 - turn;
+  if(inCheck(turn)) playCheck();
+  render();
+  afterMove();
+}
+function afterMove(){
+  var mover = turn;
+  if(findKing(mover) < 0){
+    endGame(1 - mover);
+    return;
+  }
+  var moves = genLegalMoves(mover, {});
+  if(moves.length === 0){
+    endGame(1 - mover);
+    return;
+  }
+  if(gameMode === "cpu" && turn !== playerSide){
+    startAiTurn();
+  }
+}
+function startAiTurn(){
+  thinking = true;
+  render();
+  var dots = 0;
+  var timer = setInterval(function(){
+    var el = document.getElementById("thinkdots");
+    if(el){
+      dots = (dots+1)%4;
+      var s = "";
+      for(var i=0;i<=dots;i++) s += "…";
+      el.textContent = s;
+    }
+  }, 400);
+  setTimeout(function(){
+    var m = aiPickMove();
+    clearInterval(timer);
+    thinking = false;
+    if(!m){
+      endGame(playerSide);
+      return;
+    }
+    moveHistory.push(snapshot());
+    applyMove(m);
+    lastMove = {from:m.from, to:m.to, drop:m.drop};
+    playKoma();
+    turn = 1 - turn;
+    if(inCheck(turn)) playCheck();
+    render();
+    if(findKing(turn) < 0){
+      endGame(1 - turn);
+      return;
+    }
+    var moves = genLegalMoves(turn, {});
+    if(moves.length === 0) endGame(1 - turn);
+  }, 120);
+}
+function endGame(winner){
+  gameOver = true;
+  thinking = false;
+  var title, msg;
+  if(gameMode === "2p"){
+    title = sideName(winner) + "の勝ち!";
+    msg = "お疲れさまでした。";
+  }else if(winner === playerSide){
+    title = "勝ち!";
+    msg = "見事な指し回しでした。";
+  }else{
+    title = "負け…";
+    msg = "次は勝てるはず。もう一局どうぞ。";
+  }
+  statusEl.textContent = title;
+  showPanel(
+    '<h2>' + title + '</h2>' +
+    '<p>' + msg + '</p>' +
+    '<div class="row">' +
+    '<button class="primary" id="btnAgain">もう一局</button>' +
+    '<button id="btnClose">盤面を見る</button>' +
+    '</div>'
+  );
+  document.getElementById("btnAgain").addEventListener("click", function(){
+    hidePanel(); showNewGamePanel();
+  });
+  document.getElementById("btnClose").addEventListener("click", hidePanel);
+}
+
+/* ================= 編成フロー ================= */
+function startCustomGame(){
+  clearBoardAll();
+  gameOver = false;
+  thinking = false;
+  selected = null;
+  legalCache = [];
+  lastMove = null;
+  moveHistory = [];
+  phase = "setup";
+  setupQueue = gameMode === "2p" ? [SENTE, GOTE] : [playerSide];
+  beginSetupFor(setupQueue.shift());
+  render();
+}
+function beginSetupFor(o){
+  setupOwner = o;
+  setupSelType = null;
+  clearRowsOf(o);
+  board[idx(backRank(o), 4)] = {t:"OU", o:o};
+  setupRemain = budget;
+}
+function finishCurrentSetup(){
+  if(countTypeOf(setupOwner, "OU") < 1) return;
+  if(setupQueue.length > 0){
+    beginSetupFor(setupQueue.shift());
+    render();
+    return;
+  }
+  if(gameMode === "cpu"){
+    genCpuArmy(1 - playerSide, budget);
+  }
+  resetPlayState();
+  render();
+  if(gameMode === "cpu" && turn !== playerSide) startAiTurn();
+}
+
+/* ================= パネル ================= */
+var overlayEl = document.getElementById("overlay");
+var panelEl = document.getElementById("panelContent");
+function showPanel(html){
+  panelEl.innerHTML = html;
+  overlayEl.classList.add("show");
+}
+function hidePanel(){
+  overlayEl.classList.remove("show");
+}
+function showNewGamePanel(){
+  var skinOpts = "";
+  for(var key in SKIN_NAMES){
+    skinOpts += '<option value="' + key + '">' + SKIN_NAMES[key] + '</option>';
+  }
+  showPanel(
+    '<h2>新規対局</h2>' +
+    '<div>' +
+    '<button class="modebtn" id="mbCpu">CPUと対戦</button>' +
+    '<button class="modebtn" id="mbTwo">2人で対戦</button>' +
+    '</div>' +
+    '<div>' +
+    '<button class="modebtn" id="rbStd">標準配置</button>' +
+    '<button class="modebtn" id="rbCustom">自由編成</button>' +
+    '</div>' +
+    '<div class="field" id="budgetField">' +
+    '<label>編成コスト上限(標準セット=63)</label>' +
+    '<div class="stepper">' +
+    '<button id="bdM10">-10</button>' +
+    '<button id="bdM1">-1</button>' +
+    '<span class="val" id="bdVal">63</span>' +
+    '<button id="bdP1">+1</button>' +
+    '<button id="bdP10">+10</button>' +
+    '</div></div>' +
+    '<div id="cpuOpts">' +
+    '<div class="field"><label>強さ</label>' +
+    '<select id="selDiff">' +
+    '<option value="1">やさしい</option>' +
+    '<option value="2">ふつう</option>' +
+    '<option value="3">つよい</option>' +
+    '</select></div>' +
+    '<div class="field"><label>手番</label>' +
+    '<select id="selSide">' +
+    '<option value="0">先手(自分から)</option>' +
+    '<option value="1">後手(相手から)</option>' +
+    '</select></div>' +
+    '</div>' +
+    '<div class="field"><label>駒デザイン</label>' +
+    '<select id="selSkin">' + skinOpts + '</select></div>' +
+    '<div class="field"><label>効果音</label>' +
+    '<select id="selSound">' +
+    '<option value="1">オン</option>' +
+    '<option value="0">オフ</option>' +
+    '</select></div>' +
+    '<div class="row"><button class="primary" id="btnStart">対局開始</button></div>'
+  );
+  var mbCpu = document.getElementById("mbCpu");
+  var mbTwo = document.getElementById("mbTwo");
+  var rbStd = document.getElementById("rbStd");
+  var rbCustom = document.getElementById("rbCustom");
+  var cpuOpts = document.getElementById("cpuOpts");
+  var budgetField = document.getElementById("budgetField");
+  var bdVal = document.getElementById("bdVal");
+  var chosenMode = gameMode;
+  var chosenRule = ruleMode;
+  var chosenBudget = budget;
+  function refresh(){
+    mbCpu.classList.toggle("on", chosenMode === "cpu");
+    mbTwo.classList.toggle("on", chosenMode === "2p");
+    rbStd.classList.toggle("on", chosenRule === "std");
+    rbCustom.classList.toggle("on", chosenRule === "custom");
+    cpuOpts.style.display = chosenMode === "cpu" ? "" : "none";
+    budgetField.style.display = chosenRule === "custom" ? "" : "none";
+    bdVal.textContent = chosenBudget;
+  }
+  function bumpBudget(d){
+    chosenBudget = Math.max(20, Math.min(150, chosenBudget + d));
+    refresh();
+  }
+  mbCpu.addEventListener("click", function(){ chosenMode = "cpu"; refresh(); });
+  mbTwo.addEventListener("click", function(){ chosenMode = "2p"; refresh(); });
+  rbStd.addEventListener("click", function(){ chosenRule = "std"; refresh(); });
+  rbCustom.addEventListener("click", function(){ chosenRule = "custom"; refresh(); });
+  document.getElementById("bdM10").addEventListener("click", function(){ bumpBudget(-10); });
+  document.getElementById("bdM1").addEventListener("click", function(){ bumpBudget(-1); });
+  document.getElementById("bdP1").addEventListener("click", function(){ bumpBudget(1); });
+  document.getElementById("bdP10").addEventListener("click", function(){ bumpBudget(10); });
+  refresh();
+  document.getElementById("selDiff").value = String(difficulty);
+  document.getElementById("selSide").value = String(playerSide);
+  document.getElementById("selSkin").value = pieceSkin;
+  document.getElementById("selSound").value = soundOn ? "1" : "0";
+  document.getElementById("btnStart").addEventListener("click", function(){
+    gameMode = chosenMode;
+    ruleMode = chosenRule;
+    budget = chosenBudget;
+    difficulty = parseInt(document.getElementById("selDiff").value, 10);
+    playerSide = gameMode === "cpu" ? parseInt(document.getElementById("selSide").value, 10) : SENTE;
+    pieceSkin = document.getElementById("selSkin").value;
+    soundOn = document.getElementById("selSound").value === "1";
+    hidePanel();
+    ensureAudio();
+    renderLegend();
+    if(ruleMode === "custom"){
+      startCustomGame();
+    }else{
+      initStandardGame();
+      render();
+      if(gameMode === "cpu" && turn !== playerSide) startAiTurn();
+    }
+  });
+}
+
+/* ================= ボタン ================= */
+document.getElementById("btnNew").addEventListener("click", function(){
+  showNewGamePanel();
+});
+document.getElementById("btnUndo").addEventListener("click", function(){
+  if(phase !== "play" || thinking || moveHistory.length === 0) return;
+  if(gameMode === "2p"){
+    restore(moveHistory.pop());
+  }else{
+    var steps = 0;
+    while(moveHistory.length > 0 && steps < 2){
+      restore(moveHistory.pop());
+      steps++;
+      if(turn === playerSide) break;
+    }
+  }
+  clearSelection();
+  gameOver = false;
+  render();
+});
+document.getElementById("btnStd").addEventListener("click", function(){
+  if(phase !== "setup" || budget < BASE_BUDGET) return;
+  placeStandardFor(setupOwner);
+  setupRemain = budget - BASE_BUDGET;
+  setupSelType = null;
+  render();
+});
+document.getElementById("btnClear").addEventListener("click", function(){
+  if(phase !== "setup") return;
+  beginSetupFor(setupOwner);
+  render();
+});
+document.getElementById("btnDone").addEventListener("click", function(){
+  if(phase !== "setup") return;
+  finishCurrentSetup();
+});
+
+/* ================= 起動 ================= */
+buildBoard();
+initStandardGame();
+renderLegend();
+render();
+injectAd();
+showNewGamePanel();
+</script>
+</body>
+</html>
